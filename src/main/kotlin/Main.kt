@@ -14,11 +14,12 @@ data class Version(var rev : String = "",
 				   var sha256 : String = "",
 				   var version : String = "")
 
-data class InputMod(val name : String, val url : String)
+data class InputMod(val name : String, val url : String, val out : String)
 
 data class ModInfo(var name : String = "",
 				   var url : String = "",
 				   var cache : String = "",
+				   var out : String = "",
                    val versions : MutableList<Version> = ArrayList<Version>())
 
 data class InputList(val mods : MutableList<InputMod> = ArrayList<InputMod>())
@@ -41,6 +42,7 @@ fun main(args: Array<String>) {
 		val info = ModInfo();
 		info.name = mod.name;
 		info.url = mod.url;
+		info.out = mod.out;
 		info.cache = "/tmp/cache-" + mod.name + ".git";
 		System.out.println("name:" + mod.name);
 		val cachedir = File("/tmp/cache-" + mod.name + ".git");
