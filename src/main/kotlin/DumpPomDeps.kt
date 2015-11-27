@@ -18,7 +18,7 @@ class DumpPomDeps {
         req.setPomFile(inputFile);
         req.setValidationLevel(ModelBuildingRequest.VALIDATION_LEVEL_MINIMAL);
         val model = builder.build(req).effectiveModel;
-        for(d in model.dependencies) {
+        for (d in model.dependencies) {
             println("everything:${d}");
         }
         println("test:${model}");

@@ -16,7 +16,7 @@ RUN_MVN = $(MVN) $(MVN_FLAGS)
 
 TEST_TMP = /tmp/packages     
 
-TEST_ARGS = ""
+TEST_ARGS = "$$PWD/pom.xml"
 
 all: build
 
