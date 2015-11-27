@@ -1,5 +1,5 @@
 {
-"name":"mekanism",
-"repo":"https://github.com/aidancbrady/Mekanism.git",
-"out":"output"
+  "name": "mekanism",
+  "repo": "https://github.com/aidancbrady/Mekanism.git",
+  "out": "output"
 }
