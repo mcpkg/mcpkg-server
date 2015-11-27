@@ -86,15 +86,16 @@ fun updateGitCache(mod: InputMod): ModInfo {
         ver.version = tag.key;
         ver.rev = ObjectId.toString(tag.value.objectId);
         val cmd = "nix-prefetch-git ${info.cache} --rev ${ver.rev}";
-        val hashString = ObjectId.toString(tag.value.objectId);
-        println("tag: ${tag.key} hash: ${hashString} cmd: ${cmd}");
+        println("tag:  ${tag.key}");
+        println("hash: ${ObjectId.toString(tag.value.objectId)}");
+        println("cmd:  ${cmd}");
         val proc = Runtime.getRuntime().exec(cmd);
         proc.waitFor();
         val stdoutRd = BufferedReader(InputStreamReader(proc.inputStream));
-        var hash: String;
+        var hash: String? = null;
         do {
             val line = stdoutRd.readLine();
-            hash = line ?: "";
+            hash = line ?: hash;
             println("msg: ${line}");
         } while(line != null);
         val stderrRd = BufferedReader(InputStreamReader(proc.errorStream));
@@ -102,7 +103,7 @@ fun updateGitCache(mod: InputMod): ModInfo {
             val line = stderrRd.readLine();
             println("stderr: ${line}");
         } while(line != null);
-        ver.sha256 = hash;
+        ver.sha256 = hash ?: "";
         info.versions.add(ver);
     }
     return info;
