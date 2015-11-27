@@ -7,11 +7,11 @@ This is the server for mcpkg, the Minecraft package manager.
 ## Compile
 
 ```
-$ mvn compile
+$ make build
 ```
 
-## Run
+## Test
 
 ```
-$ mvn ceylon:run
+$ make test
 ```
