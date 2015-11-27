@@ -26,7 +26,7 @@ data class ModInfo(var name:     String = "",
 
 data class OutputList(val mods: MutableList<ModInfo> = ArrayList<ModInfo>());
 
-fun load_package(file: FileWrapper): InputMod {
+fun loadPackage(file: FileWrapper): InputMod {
     val gson = Gson();
     val obj = gson.fromJson(file.readText(), InputMod::class.java);
     return obj;
@@ -99,7 +99,7 @@ fun updateGitCache(mod: InputMod): ModInfo {
             println("msg: ${line}");
         } while(line != null);
         val stderrRd = BufferedReader(InputStreamReader(proc.errorStream));
-        do{
+        do {
             val line = stderrRd.readLine();
             println("stderr: ${line}");
         } while(line != null);
@@ -109,17 +109,17 @@ fun updateGitCache(mod: InputMod): ModInfo {
     return info;
 }
 
-fun update_packages(dir: FileWrapper): OutputList {
+fun updatePackages(dir: FileWrapper): OutputList {
     val out = OutputList();
     for(p in dir.list()) {
         var pkg = dir.get(p);
         val hasher = MessageDigest.getInstance("SHA-256");
         hasher.update(pkg.readBytes());
         val hash = "%064x".format(java.math.BigInteger(1, hasher.digest()));
-        val parsed = load_package(pkg);
-        val correct_name = "%s-%s.json".format(hash, parsed.name);
-        if(correct_name != p) {
-            val newPath = dir.get(correct_name);
+        val parsed = loadPackage(pkg);
+        val correctName = "%s-%s.json".format(hash, parsed.name);
+        if(correctName != p) {
+            val newPath = dir.get(correctName);
             pkg.renameTo(newPath);
             pkg = newPath;
             // FIXME: use newPath
@@ -130,10 +130,10 @@ fun update_packages(dir: FileWrapper): OutputList {
 }
 
 fun main(args: Array<String>) {
-    val package_source = FileRootNative(File("/tmp/packages/"));
-    val package_directory = package_source.get(".");
+    val packageSource = FileRootNative(File("/tmp/packages/"));
+    val packageDirectory = packageSource.get(".");
 
-    val result = update_packages(package_directory);
+    val result = updatePackages(packageDirectory);
     val gson = Gson();
     try {
         val output = FileWriter(File("/tmp/output.json"));
