@@ -10,27 +10,29 @@ import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.storage.file.*;
 import java.security.MessageDigest
 
-data class Version(var rev : String = "",
-                   var sha256 : String = "",
-                   var version : String = "")
+data class Version(var rev:     String = "",
+                   var sha256:  String = "",
+                   var version: String = "")
 
-data class InputMod(val name : String, val repo : String, val out : String)
+data class InputMod(val name: String,
+                    val repo: String,
+                    val out:  String)
 
-data class ModInfo(var name : String = "",
-                   var repo : String = "",
-                   var cache : String = "",
-                   var out : String = "",
-                   val versions : MutableList<Version> = ArrayList<Version>())
+data class ModInfo(var name:     String = "",
+                   var repo:     String = "",
+                   var cache:    String = "",
+                   var out:      String = "",
+                   val versions: MutableList<Version> = ArrayList<Version>())
 
-data class OutputList(val mods : MutableList<ModInfo> = ArrayList<ModInfo>())
+data class OutputList(val mods: MutableList<ModInfo> = ArrayList<ModInfo>())
 
-fun load_package(file: FileWrapper) : InputMod {
+fun load_package(file: FileWrapper): InputMod {
     val gson = Gson();
     val obj = gson.fromJson(file.readText(),InputMod::class.java);
     return obj;
 }
 
-fun updateGitCache(mod: InputMod) : ModInfo {
+fun updateGitCache(mod: InputMod): ModInfo {
     val info = ModInfo();
     info.name = mod.name;
     info.repo = mod.repo;
@@ -38,7 +40,7 @@ fun updateGitCache(mod: InputMod) : ModInfo {
     info.cache = "/tmp/cache-" + mod.name + ".git";
     System.out.println("name:" + mod.name);
     val cachedir = File(info.cache);
-    var git : Git? = null;
+    var git: Git? = null;
     if(cachedir.exists()) {
         val builder = FileRepositoryBuilder();
         builder.setMustExist(true);
@@ -50,19 +52,15 @@ fun updateGitCache(mod: InputMod) : ModInfo {
                 val fetcher = git.fetch();
                 fetcher.call();
             } else {
-                // directory is not a valid git, delete and re-clone?
+                // FIXME: directory is not a valid git, delete and re-clone?
             }
         } catch(e: IOException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch(e: InvalidRemoteException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch(e: TransportException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch(e: GitAPIException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     } else {
@@ -73,13 +71,10 @@ fun updateGitCache(mod: InputMod) : ModInfo {
         try {
             git = cc.call();
         } catch(e: InvalidRemoteException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch(e: TransportException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch(e: GitAPIException) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -91,7 +86,8 @@ fun updateGitCache(mod: InputMod) : ModInfo {
         ver.version = tag.key;
         ver.rev = ObjectId.toString(tag.value.objectId);
         val cmd = "nix-prefetch-git ${info.cache} --rev ${ver.rev}";
-        println("tag:${tag.key} hash:${ObjectId.toString(tag.value.objectId)} cmd:${cmd}");
+        val hashString = ObjectId.toString(tag.value.objectId);
+        println("tag:${tag.key} hash:${hashString} cmd:${cmd}");
         val proc = Runtime.getRuntime().exec(cmd);
         proc.waitFor();
         val reader = BufferedReader(InputStreamReader(proc.inputStream));
@@ -100,28 +96,28 @@ fun updateGitCache(mod: InputMod) : ModInfo {
             val line = reader.readLine();
             hash = line ?: "";
             println("msg:"+line);
-        } while (line != null);
+        } while(line != null);
         val reader2 = BufferedReader(InputStreamReader(proc.errorStream));
         do{
             val line = reader.readLine();
             println("stderr:"+line);
-        } while (line != null);
+        } while(line != null);
         ver.sha256 = hash;
         info.versions.add(ver);
     }
     return info;
 }
 
-fun update_packages(dir: FileWrapper) : OutputList {
+fun update_packages(dir: FileWrapper): OutputList {
     val out = OutputList();
-    for (p in dir.list()) {
+    for(p in dir.list()) {
         var pkg = dir.get(p);
         val hasher = MessageDigest.getInstance("SHA-256");
         hasher.update(pkg.readBytes());
         val hash = "%064x".format(java.math.BigInteger(1,hasher.digest()));
         val parsed = load_package(pkg);
         val correct_name = "%s-%s.json".format(hash,parsed.name);
-        if (correct_name != p) {
+        if(correct_name != p) {
             val newpath = dir.get(correct_name);
             pkg.renameTo(newpath);
             pkg = newpath;
@@ -142,7 +138,6 @@ fun main(args: Array<String>) {
         output.write(gson.toJson(result));
         output.close();
     } catch(e: IOException) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
     }
 }
