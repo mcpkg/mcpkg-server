@@ -1,7 +1,0 @@
-{
-"mods":[
-{ "name":"mekanism", "url":"https://github.com/aidancbrady/Mekanism.git", "out":"output" },
-{ "name":"ae2", "url":"https://github.com/AppliedEnergistics/Applied-Energistics-2.git", "out":"build/libs" },
-{ "name":"blood_magic", "url":"https://github.com/WayofTime/BloodMagic.git", "out":"output" }
-]
-}
