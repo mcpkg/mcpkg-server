@@ -18,8 +18,11 @@ TEST_TMP = /tmp/packages
 
 TEST_ARGS = ""
 
+all: build
+
 build: $(SOURCE_FILES)
-	$(RUN_MVN) compile
+	$(RUN_MVN) "compile"
+	$(RUN_MVN) "test-compile"
 
 test-setup: $(TEST_FILES)
 	-[ -e $(TEST_TMP) ] && rm -rf $(TEST_TMP)

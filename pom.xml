@@ -47,7 +47,7 @@
   <build>
     <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
     <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
-
+    
     <plugins>
       <plugin>
         <artifactId>kotlin-maven-plugin</artifactId>
@@ -77,10 +77,8 @@
         <version>1.2.1</version>
         <executions>
           <execution>
-            <phase>test</phase>
-            <goals>
-              <goal>java</goal>
-            </goals>
+            <id>test</id>
+            <goals><goal>java</goal></goals>
           </execution>
         </executions>
         <configuration>
