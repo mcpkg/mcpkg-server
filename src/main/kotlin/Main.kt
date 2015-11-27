@@ -88,17 +88,23 @@ fun updateGitCache(mod: InputMod) : ModInfo {
     while(i.hasNext()) {
         val ver = Version();
         val tag = i.next();
-        System.out.println("tag:%s hash:%s".format(tag.key,ObjectId.toString(tag.value.objectId)));
         ver.version = tag.key;
         ver.rev = ObjectId.toString(tag.value.objectId);
-        val proc = Runtime.getRuntime().exec("nix-prefetch-git %s --rev %s".format(info.cache,ver.rev));
+        val cmd = "nix-prefetch-git ${info.cache} --rev ${ver.rev}";
+        println("tag:${tag.key} hash:${ObjectId.toString(tag.value.objectId)} cmd:${cmd}");
+        val proc = Runtime.getRuntime().exec(cmd);
         proc.waitFor();
         val reader = BufferedReader(InputStreamReader(proc.inputStream));
         var hash = "";
-        do {
+        do{
             val line = reader.readLine();
-            if (line != null) hash = line;
-            System.out.println("msg:"+line);
+            hash = line ?: "";
+            println("msg:"+line);
+        } while (line != null);
+        val reader2 = BufferedReader(InputStreamReader(proc.errorStream));
+        do{
+            val line = reader.readLine();
+            println("stderr:"+line);
         } while (line != null);
         ver.sha256 = hash;
         info.versions.add(ver);
