@@ -8,12 +8,18 @@ TEST_FILES = test-data/ae2.json \
              test-data/mekanism.json \
              test-data/blood-magic.json
 
+MVN = mvn
+
+MVN_FLAGS = -T 8
+
+RUN_MVN = $(MVN) $(MVN_FLAGS)
+
 TEST_TMP = /tmp/packages     
 
 TEST_ARGS = ""
 
 build: $(SOURCE_FILES)
-	mvn compile
+	$(RUN_MVN) compile
 
 test-setup: $(TEST_FILES)
 	-[ -e $(TEST_TMP) ] && rm -rf $(TEST_TMP)
@@ -21,4 +27,4 @@ test-setup: $(TEST_FILES)
 	cp -vt $(TEST_TMP) $(TEST_FILES)
 
 test: build test-setup
-	mvn exec:java -Dexec.args=$(TEST_ARGS)
+	$(RUN_MVN) "exec:java" -Dexec.args=$(TEST_ARGS)
