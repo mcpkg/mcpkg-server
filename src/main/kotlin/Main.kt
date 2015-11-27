@@ -1,4 +1,4 @@
-package org.mcpkg.server
+package org.mcpkg.server;
 
 import java.io.*;
 import java.util.*;
@@ -8,27 +8,27 @@ import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.storage.file.*;
-import java.security.MessageDigest
+import java.security.MessageDigest;
 
 data class Version(var rev:     String = "",
                    var sha256:  String = "",
-                   var version: String = "")
+                   var version: String = "");
 
 data class InputMod(val name: String,
                     val repo: String,
-                    val out:  String)
+                    val out:  String);
 
 data class ModInfo(var name:     String = "",
                    var repo:     String = "",
                    var cache:    String = "",
                    var out:      String = "",
-                   val versions: MutableList<Version> = ArrayList<Version>())
+                   val versions: MutableList<Version> = ArrayList<Version>());
 
-data class OutputList(val mods: MutableList<ModInfo> = ArrayList<ModInfo>())
+data class OutputList(val mods: MutableList<ModInfo> = ArrayList<ModInfo>());
 
 fun load_package(file: FileWrapper): InputMod {
     val gson = Gson();
-    val obj = gson.fromJson(file.readText(),InputMod::class.java);
+    val obj = gson.fromJson(file.readText(), InputMod::class.java);
     return obj;
 }
 
@@ -55,13 +55,13 @@ fun updateGitCache(mod: InputMod): ModInfo {
                 // FIXME: directory is not a valid git, delete and re-clone?
             }
         } catch(e: IOException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         } catch(e: InvalidRemoteException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         } catch(e: TransportException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         } catch(e: GitAPIException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         }
     } else {
         val cc = CloneCommand();
@@ -71,11 +71,11 @@ fun updateGitCache(mod: InputMod): ModInfo {
         try {
             git = cc.call();
         } catch(e: InvalidRemoteException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         } catch(e: TransportException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         } catch(e: GitAPIException) {
-            e.printStackTrace();
+            e.printStackTrace(); // FIXME: handle error properly
         }
     }
     val tags = git!!.repository.tags;
@@ -90,16 +90,16 @@ fun updateGitCache(mod: InputMod): ModInfo {
         println("tag: ${tag.key} hash: ${hashString} cmd: ${cmd}");
         val proc = Runtime.getRuntime().exec(cmd);
         proc.waitFor();
-        val reader = BufferedReader(InputStreamReader(proc.inputStream));
-        var hash = "";
-        do{
-            val line = reader.readLine();
+        val stdoutRd = BufferedReader(InputStreamReader(proc.inputStream));
+        var hash: String;
+        do {
+            val line = stdoutRd.readLine();
             hash = line ?: "";
             println("msg: ${line}");
         } while(line != null);
-        val reader2 = BufferedReader(InputStreamReader(proc.errorStream));
+        val stderrRd = BufferedReader(InputStreamReader(proc.errorStream));
         do{
-            val line = reader.readLine();
+            val line = stderrRd.readLine();
             println("stderr: ${line}");
         } while(line != null);
         ver.sha256 = hash;
@@ -114,13 +114,14 @@ fun update_packages(dir: FileWrapper): OutputList {
         var pkg = dir.get(p);
         val hasher = MessageDigest.getInstance("SHA-256");
         hasher.update(pkg.readBytes());
-        val hash = "%064x".format(java.math.BigInteger(1,hasher.digest()));
+        val hash = "%064x".format(java.math.BigInteger(1, hasher.digest()));
         val parsed = load_package(pkg);
-        val correct_name = "%s-%s.json".format(hash,parsed.name);
+        val correct_name = "%s-%s.json".format(hash, parsed.name);
         if(correct_name != p) {
-            val newpath = dir.get(correct_name);
-            pkg.renameTo(newpath);
-            pkg = newpath;
+            val newPath = dir.get(correct_name);
+            pkg.renameTo(newPath);
+            pkg = newPath;
+            // FIXME: use newPath
         }
         out.mods.add(updateGitCache(parsed));
     }
@@ -138,6 +139,6 @@ fun main(args: Array<String>) {
         output.write(gson.toJson(result));
         output.close();
     } catch(e: IOException) {
-        e.printStackTrace();
+        e.printStackTrace(); // FIXME: handle error properly
     }
 }
