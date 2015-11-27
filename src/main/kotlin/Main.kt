@@ -131,19 +131,16 @@ fun updatePackages(dir: FileWrapper): OutputList {
 }
 
 fun main(args: Array<String>) {
-//    val packageSource = FileRootNative(File("/tmp/packages/"));
-//    val packageDirectory = packageSource.get(".");
-//
-//    val result = updatePackages(packageDirectory);
-//    val gson = Gson();
-//    try {
-//        val output = FileWriter(File("/tmp/output.json"));
-//        output.write(gson.toJson(result));
-//        output.close();
-//    } catch(e: IOException) {
-//        e.printStackTrace(); // FIXME: handle error properly
-//    }
-    val inputFile = File(args[0]);
-    val dumper = DumpPomDeps();
-    dumper.doDump(inputFile);
+    val packageSource = FileRootNative(File("/tmp/packages/"));
+    val packageDirectory = packageSource.get(".");
+
+    val result = updatePackages(packageDirectory);
+    val gson = Gson();
+    try {
+        val output = FileWriter(File("/tmp/output.json"));
+        output.write(gson.toJson(result));
+        output.close();
+    } catch(e: IOException) {
+        e.printStackTrace(); // FIXME: handle error properly
+    }
 }
