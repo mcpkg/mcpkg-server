@@ -48,6 +48,11 @@
       <artifactId>maven-core</artifactId>
       <version>3.3.9</version>
     </dependency>
+    <dependency>
+      <groupId>org.wasabi</groupId>
+      <artifactId>wasabi</artifactId>
+      <version>0.1-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -105,7 +110,11 @@
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
-    </repository> 
+    </repository>
+    <repository>
+      <id>jetbrains</id>
+      <url>http://repository.jetbrains.com/all</url>
+    </repository>
   </repositories>
 
   <pluginRepositories>

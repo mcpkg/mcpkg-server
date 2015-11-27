@@ -8,12 +8,17 @@ import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.storage.file.*;
+import org.wasabi.app.AppServer
 import java.security.MessageDigest;
-import org.mcpkg.server.DumpPomDeps;
+
+data class Dependency(var groupId: String = "", var artifactId: String = "", var version: String = "");
+
+data class Repo(val name: String, val url: String);
 
 data class Version(var rev:     String = "",
                    var sha256:  String = "",
-                   var version: String = "");
+                   var version: String = "",
+                   var deps:    List<Dependency>? = ArrayList<Dependency>());
 
 data class InputMod(val name: String,
                     val repo: String,
@@ -94,20 +99,99 @@ fun updateGitCache(mod: InputMod): ModInfo {
         proc.waitFor();
         val stdoutRd = BufferedReader(InputStreamReader(proc.inputStream));
         var hash: String? = null;
-        do {
-            val line = stdoutRd.readLine();
-            hash = line ?: hash;
-            println("msg: ${line}"); // DEBUG
-        } while(line != null);
+        stdoutRd.forEachLine {
+            hash = it;
+            println("msg: $it"); // DEBUG
+        }
         val stderrRd = BufferedReader(InputStreamReader(proc.errorStream));
-        do {
-            val line = stderrRd.readLine();
-            println("stderr: ${line}"); // DEBUG
-        } while(line != null);
+        stderrRd.forEachLine {
+            println("stderr: $it"); // DEBUG
+            if (it.startsWith("path is ")) {
+                var words = it.split(" ");
+                var localpath = words[2];
+                println("found path ${localpath}");
+                ver.deps = parseDeps(localpath,info.name);
+            }
+        };
         ver.sha256 = hash ?: "";
-        info.versions.add(ver);
+        if (ver.deps != null) {
+            info.versions.add(ver);
+        }
     }
     return info;
+}
+
+fun parseDeps(localPath: String, name: String): List<Dependency>? {
+    val cmd = "gradle --init-script init.gradle -q showRepos -p $localPath --project-cache-dir /tmp/gradle-$name"
+    println("cmd is $cmd");
+    val proc = Runtime.getRuntime().exec(cmd);
+    val stdoutRd = BufferedReader(InputStreamReader(proc.inputStream));
+    var abort = false;
+    var repo_list: MutableList<Repo> = ArrayList<Repo>();
+    try {
+        stdoutRd.forEachLine {
+            println("msg: $it"); // DEBUG
+            // parses a line in the form of REPO_LIST;['test-2'='http://nixcache.localnet/maven2', 'forge'='http://files.minecraftforge.net/maven', 'MavenRepo'='https://repo1.maven.org/maven2/', 'minecraft'='https://libraries.minecraft.net/', 'CB Maven FS'='http://chickenbones.net/maven/', 'Waila Mobius Repo'='http://mobiusstrip.eu/maven', 'FireBall API Depot'='http://dl.tsr.me/artifactory/libs-release-local', forgeFlatRepo=flat]
+            if (it.startsWith("REPO_LIST;")) {
+                var repos = it.split(";")[1].trim('[', ']').split(",");
+                for (repo in repos) {
+                    val parts = repo.trim().split("=");
+                    repo_list.add(Repo(parts[0], parts[1]));
+                }
+            }
+        }
+        val stderrRd = BufferedReader(InputStreamReader(proc.errorStream));
+        stderrRd.forEachLine {
+            println("stderr: $it"); // DEBUG
+        };
+    } catch (e: IOException) {
+    } // destroy closes the stream, causing an IOException
+    if (abort) return null;
+
+    val webserver = WebServer(repo_list);
+    webserver.start();
+    val proxy_config = """allprojects {
+    repositories {
+        maven {
+            name = "test-2"
+            url "http://localhost:%d/maven2"
+        }
+    }
+}""".format(webserver.port);
+    var proxy_file = File.createTempFile("proxy",".gradle");
+    proxy_file.writeText(proxy_config);
+
+    val inspect_cmd = "gradle --no-daemon -p $localPath --project-cache-dir /tmp/gradle-$name --init-script ${proxy_file.absolutePath} dependencies";
+
+    var inspect_proc = Runtime.getRuntime().exec(inspect_cmd);
+    BufferedReader(InputStreamReader(inspect_proc.inputStream)).forEachLine {
+        println(it);
+    }
+    BufferedReader(InputStreamReader(inspect_proc.errorStream)).forEachLine {
+        println(it);
+    }
+    proxy_file.delete();
+    webserver.stop();
+
+    return ArrayList<Dependency>();
+}
+
+class WebServer(repolist: List<Repo>) {
+    var port = 0;
+    val server = AppServer();
+    fun start() {
+        server.get("***",{
+            println(request.uri);
+            next();
+        },{
+        });
+        server.start(false); // TODO, increment port and retry to co-exist with self
+        port = server.configuration.port;
+    }
+
+    fun stop() {
+        server.stop();
+    }
 }
 
 fun updatePackages(dir: FileWrapper): OutputList {

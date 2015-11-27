@@ -1,0 +1,5 @@
+allprojects {
+  task showRepos << {
+    println "REPO_LIST;" + repositories.collect { try { it.name + "=" + it.url } catch (MissingPropertyException e) { it.name+"=flat" } }
+  }
+}
