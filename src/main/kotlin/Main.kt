@@ -37,7 +37,7 @@ fun updateGitCache(mod: InputMod) : ModInfo {
     info.out = mod.out;
     info.cache = "/tmp/cache-" + mod.name + ".git";
     System.out.println("name:" + mod.name);
-    val cachedir = File("/tmp/cache-" + mod.name + ".git");
+    val cachedir = File(info.cache);
     var git : Git? = null;
     if(cachedir.exists()) {
         val builder = FileRepositoryBuilder();
@@ -45,7 +45,7 @@ fun updateGitCache(mod: InputMod) : ModInfo {
         builder.setGitDir(cachedir);
         try {
             val repo = builder.build();
-            if(repo.getObjectDatabase().exists()) {
+            if(repo.objectDatabase.exists()) {
                 git = Git(repo);
                 val fetcher = git.fetch();
                 fetcher.call();
@@ -83,14 +83,24 @@ fun updateGitCache(mod: InputMod) : ModInfo {
             e.printStackTrace();
         }
     }
-    val tags = git!!.getRepository().getTags();
+    val tags = git!!.repository.tags;
     val i = tags.entries.iterator();
     while(i.hasNext()) {
         val ver = Version();
         val tag = i.next();
-        //System.out.println("tag:" + tag.value.getObjectId());
+        System.out.println("tag:%s hash:%s".format(tag.key,ObjectId.toString(tag.value.objectId)));
         ver.version = tag.key;
-        ver.rev = ObjectId.toString(tag.value.getObjectId());
+        ver.rev = ObjectId.toString(tag.value.objectId);
+        val proc = Runtime.getRuntime().exec("nix-prefetch-git %s --rev %s".format(info.cache,ver.rev));
+        proc.waitFor();
+        val reader = BufferedReader(InputStreamReader(proc.inputStream));
+        var hash = "";
+        do {
+            val line = reader.readLine();
+            if (line != null) hash = line;
+            System.out.println("msg:"+line);
+        } while (line != null);
+        ver.sha256 = hash;
         info.versions.add(ver);
     }
     return info;
