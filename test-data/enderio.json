@@ -1,0 +1,6 @@
+{
+  "name": "enderio",
+  "repo": "https://github.com/SleepyTrousers/EnderIO.git",
+  "out": "build/libs/",
+  "skipped_versions":["1.6.2","1.6.4","1.6.4-final"]
+}
