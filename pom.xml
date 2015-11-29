@@ -48,11 +48,19 @@
       <artifactId>maven-core</artifactId>
       <version>3.3.9</version>
     </dependency>
+
     <dependency>
       <groupId>org.wasabi</groupId>
       <artifactId>wasabi</artifactId>
       <version>0.1-SNAPSHOT</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.8.11.2</version>
+    </dependency>
+
   </dependencies>
 
   <build>
