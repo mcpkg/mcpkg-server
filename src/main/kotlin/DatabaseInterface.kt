@@ -21,11 +21,16 @@ abstract class DatabaseInterface {
 }
 
 class SqliteMcpkgDatabase : DatabaseInterface() {
+    val database_version = 1;
+
     private val queryVersionStatement: PreparedStatement by lazy {
         connection.prepareStatement("SELECT rev,sha256,version FROM versions WHERE modslug = ? AND version = ?")
     }
     private val insertVersionStatement: PreparedStatement by lazy {
         connection.prepareStatement("INSERT OR REPLACE INTO versions (rev,sha256,version,modslug) VALUES (?,?,?,?)");
+    }
+    private val setVersion: PreparedStatement by lazy {
+        connection.prepareStatement("INSERT OR REPLACE INTO config (key,value) VALUES ('version',?)");
     }
     override fun queryModVersion(modName: String, version: String): Version? {
         val query = queryVersionStatement;
@@ -33,11 +38,11 @@ class SqliteMcpkgDatabase : DatabaseInterface() {
         query.setString(2,version);
         val result = query.executeQuery();
         if (result.next()) {
-            val version = Version();
-            version.rev = result.getString("rev");
-            version.sha256 = result.getString("sha256");
-            version.version = result.getString("version");
-            return version;
+            val ver = Version();
+            ver.rev = result.getString("rev");
+            ver.sha256 = result.getString("sha256");
+            ver.version = result.getString("version");
+            return ver;
         }
         return null;
     }
@@ -57,9 +62,31 @@ class SqliteMcpkgDatabase : DatabaseInterface() {
         connection = DriverManager.getConnection("jdbc:sqlite:test.db");
         val query1 = connection.createStatement();
         try {
+            query1.execute("CREATE TABLE IF NOT EXISTS config (key,value)");
+            query1.execute("CREATE UNIQUE INDEX IF NOT EXISTS config_key ON config(key)")
+            query1.execute("CREATE UNIQUE INDEX IF NOT EXISTS version_key ON versions(modslug,version)")
             query1.execute("CREATE TABLE versions (modslug,version,rev,sha256)");
         } catch (e:SQLException) {
 
         }
+        val result = query1.executeQuery("SELECT value FROM config WHERE key = 'version'");
+        var current_version = 0;
+        if (result.next()) {
+            current_version = result.getInt("value");
+        }
+        var x = current_version;
+        while (x < database_version) {
+            doUpgrade(x,x+1);
+            x++;
+            saveVersion(x);
+        }
+    }
+    private fun saveVersion(ver: Int) {
+        val query = setVersion;
+        query.setInt(1,ver);
+        query.execute();
+    }
+    // upgrade the db schema from ver current to ver target
+    private fun doUpgrade(current: Int, target: Int) {
     }
 }

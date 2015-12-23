@@ -89,8 +89,11 @@ fun updateGitCache(db:DatabaseInterface, mod: InputMod): ModInfo {
 
         val ver = db.queryModVersion(info.name,tag.key);
         if (ver != null) {
-            info.versions.add(ver);
-            continue;
+            if (ver.rev == ObjectId.toString(tag.value.objectId)) {
+                info.versions.add(ver);
+                continue;
+            }
+            println("key: ${tag.key} cache: ${ver.rev} actual: ${ObjectId.toString(tag.value.objectId)}");
         }
         val ver2 = Version();
         ver2.version = tag.key;
@@ -107,8 +110,11 @@ fun updateGitCache(db:DatabaseInterface, mod: InputMod): ModInfo {
 
         val ver = db.queryModVersion(info.name, branch.name.split("/")[2]);
         if (ver != null) {
-            info.versions.add(ver);
-            continue;
+            if (ver.rev == ObjectId.toString(branch.objectId)) {
+                info.versions.add(ver);
+                continue;
+            }
+            println("key: ${branch.name} cache: ${ver.rev} actual: ${ObjectId.toString(branch.objectId)}");
         }
         val ver2 = Version();
         ver2.version = branch.name.split("/")[2];
