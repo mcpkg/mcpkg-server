@@ -26,67 +26,85 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class Multipart {
-    private final String boundary;
-    private static final String LINE_FEED = "\r\n";
-    private HttpURLConnection httpConn;
-    private String charset;
-    private OutputStream out;
-    private PrintWriter writer;
+private val LINE_FEED = "\r\n";
 
-    public Multipart(String requestURL, String charset) throws IOException {
-        this.charset = charset;
 
-        boundary = createBoundary();
+public class Multipart(requestURL: String, charset: String) {
+    private val httpConn: HttpURLConnection;
+    private val out: OutputStream;
+    private val writer: PrintWriter;
+    
+    private val boundary = createBoundary();
+    private val charset  = charset; 
 
-        URL url = new URL(requestURL);
-        httpConn = (HttpURLConnection) url.openConnection();
+    init {
+        val url = URL(requestURL);
+        httpConn = url.openConnection() as HttpURLConnection;
         httpConn.setUseCaches(false);
         httpConn.setDoOutput(true);
         httpConn.setDoInput(true);
-        httpConn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        httpConn.setRequestProperty("User-Agent", "Java IPFS CLient");
+        httpConn.setRequestProperty("Content-Type",
+                                    "multipart/form-data; boundary=$boundary");
+        httpConn.setRequestProperty("User-Agent",
+                                    "Java IPFS Client");
         out = httpConn.getOutputStream();
-        writer = new PrintWriter(new OutputStreamWriter(out, charset), true);
+        writer = PrintWriter(OutputStreamWriter(out, charset), true);
     }
 
-    public static String createBoundary() {
-        Random r = new Random();
-        String allowed = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        StringBuilder b = new StringBuilder();
-        for (int i=0; i < 32; i++)
-            b.append(allowed.charAt(r.nextInt(allowed.length())));
-        return b.toString();
+    companion object Static {
+        val allowed
+          = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          
+        public fun createBoundary(): String {
+            val r = Random();
+            val b = StringBuilder();
+            var i = 0;
+            while(i < 32) {
+                i++;
+                b.append(allowed.charAt(r.nextInt(allowed.length())));
+                i++;
+            }
+            return b.toString();
+        }
     }
 
-    public void addFormField(String name, String value) {
-        writer.append("--" + boundary).append(LINE_FEED);
-        writer.append("Content-Disposition: form-data; name=\"" + name + "\"")
-                .append(LINE_FEED);
-        writer.append("Content-Type: text/plain; charset=" + charset).append(
-                LINE_FEED);
+    public fun addFormField(name: String, value: String) {
+        writer.append("--" + boundary);
         writer.append(LINE_FEED);
-        writer.append(value).append(LINE_FEED);
+        writer.append("Content-Disposition: form-data; name=\"$name\"");
+        writer.append(LINE_FEED);
+        writer.append("Content-Type: text/plain; charset=$charset")
+        writer.append(LINE_FEED);
+        writer.append(LINE_FEED);
+        writer.append(value);
+        writer.append(LINE_FEED);
         writer.flush();
     }
 
-    public void addFilePart(String fieldName, NamedStreamable uploadFile) throws IOException {
-        Optional<String> fileName = uploadFile.getName();
-        writer.append("--" + boundary).append(LINE_FEED);
-        if (!fileName.isPresent())
-            writer.append("Content-Disposition: file; name=\"" + fieldName + "\";").append(LINE_FEED);
-        else
-            writer.append("Content-Disposition: file; name=\"" + fieldName + "\"; filename=\"" + fileName.get() + "\"").append(LINE_FEED);
+    public fun addFilePart(fieldName: String, uploadFile: NamedStreamable) {
+        val fileName = uploadFile.getName();
+        writer.append("--" + boundary);
+        writer.append(LINE_FEED);
+        writer.append("Content-Disposition: ");
+        writer.append("file; ")
+        writer.append("name=\"$fieldName\"; ");
+        if(fileName.isPresent()) {
+            writer.append("filename=\"${fileName.get()}\"");
+        }
+        writer.append(LINE_FEED);
         writer.append("Content-Type: application/octet-stream").append(LINE_FEED);
         writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
         writer.append(LINE_FEED);
         writer.flush();
 
-        InputStream inputStream = uploadFile.getInputStream();
-        byte[] buffer = new byte[4096];
-        int r;
-        while ((r = inputStream.read(buffer)) != -1)
+        val inputStream = uploadFile.getInputStream();
+        val buffer = ByteArray(4096);
+        var r: Int;
+        while(true) {
+            r = inputStream.read(buffer);
+            if(r == -1) { break; }
             out.write(buffer, 0, r);
+        }
         out.flush();
         inputStream.close();
 
@@ -94,29 +112,33 @@ public class Multipart {
         writer.flush();
     }
 
-    public void addHeaderField(String name, String value) {
-        writer.append(name + ": " + value).append(LINE_FEED);
+    public fun addHeaderField(name: String, value: String) {
+        writer.append("${name}: ${value}")
+        writer.append(LINE_FEED);
         writer.flush();
     }
 
-    public String finish() throws IOException {
-        StringBuilder b = new StringBuilder();
+    public fun finish(): String {
+        val b = StringBuilder();
 
-        writer.append("--" + boundary + "--").append(LINE_FEED);
+        writer.append("--${boundary}--");
+        writer.append(LINE_FEED);
         writer.close();
 
-        int status = httpConn.getResponseCode();
-        if (status == HttpURLConnection.HTTP_OK) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    httpConn.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
+        val status = httpConn.getResponseCode();
+        if(status == HttpURLConnection.HTTP_OK) {
+            val inS = httpConn.getInputStream();
+            val reader = BufferedReader(InputStreamReader(inS));
+            var line: String;
+            while(true) {
+                line = reader.readLine()
+                if(line == null) { break; }
                 b.append(line);
             }
             reader.close();
             httpConn.disconnect();
         } else {
-            throw new IOException("Server returned status: " + status);
+            throw IOException("Server returned status: $status");
         }
 
         return b.toString();
