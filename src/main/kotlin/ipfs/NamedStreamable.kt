@@ -25,60 +25,53 @@ package org.ipfs.api;
 import java.io.*;
 import java.util.*;
 
-public interface NamedStreamable
-{
-    InputStream getInputStream() throws IOException;
+public interface NamedStreamable {
+    fun getInputStream(): InputStream;
 
-    Optional<String> getName();
+    fun getName(): Optional<String>;
 
-    default byte[] getContents() throws IOException {
-        InputStream in = getInputStream();
-        ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        byte[] tmp = new byte[4096];
-        int r;
-        while ((r=in.read(tmp))>= 0)
-            bout.write(tmp, 0, r);
+    fun getContents(): ByteArray {
+        val inS = getInputStream();
+        val bout = ByteArrayOutputStream();
+        val tmp = ByteArray(4096);
+        var r: Int;
+        var i: Int;
+        while(true) {
+          r = inS.read(tmp)
+          if(r < 0) { break; }
+          bout.write(tmp, 0, r);
+        }
         return bout.toByteArray();
     }
 
-    class FileWrapper implements NamedStreamable {
-        private final File source;
+    class FileWrapper(source: File): NamedStreamable {
+        private val source = source;
 
-        public FileWrapper(File source) {
-            this.source = source;
+        public override fun getInputStream(): InputStream {
+            return FileInputStream(source);
         }
 
-        public InputStream getInputStream() throws IOException {
-            return new FileInputStream(source);
-        }
-
-        public Optional<String> getName() {
+        public override fun getName(): Optional<String> {
             return Optional.of(source.getName());
         }
     }
 
-    class ByteArrayWrapper implements NamedStreamable {
-        private final Optional<String> name;
-        private final byte[] data;
+    class ByteArrayWrapper(name: Optional<String>,
+                           bytes: ByteArray): NamedStreamable {
+        private val name = name;
+        private val bytes = bytes;
 
-        public ByteArrayWrapper(byte[] data) {
-            this(Optional.empty(), data);
+        constructor(bytes: ByteArray) :
+            this(Optional.empty(), bytes) {}
+            
+        constructor(name: String, bytes: ByteArray) :
+            this(Optional.empty(), bytes) {}
+
+        public override fun getInputStream(): InputStream {
+            return ByteArrayInputStream(bytes);
         }
 
-        public ByteArrayWrapper(String name, byte[] data) {
-            this(Optional.of(name), data);
-        }
-
-        public ByteArrayWrapper(Optional<String> name, byte[] data) {
-            this.name = name;
-            this.data = data;
-        }
-
-        public InputStream getInputStream() throws IOException {
-            return new ByteArrayInputStream(data);
-        }
-
-        public Optional<String> getName() {
+        public override fun getName(): Optional<String> {
             return name;
         }
     }
