@@ -26,182 +26,191 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class Protocol {
-    public static int LENGTH_PREFIXED_VAR_SIZE = -1;
+val LENGTH_PREFIXED_VAR_SIZE = -1;
 
-    enum Type {
-        IP4(4, 32, "ip4"),
-        TCP(6, 16, "tcp"),
-        UDP(17, 16, "udp"),
-        DCCP(33, 16, "dccp"),
-        IP6(41, 128, "ip6"),
-        SCTP(132, 16, "sctp"),
-        UTP(301, 0, "utp"),
-        UDT(302, 0, "udt"),
-        IPFS(421, LENGTH_PREFIXED_VAR_SIZE, "ipfs"),
-        HTTPS(443, 0, "https"),
-        HTTP(480, 0, "http");
+enum class ProtocolType(val code: Int, val size: Int, val pname: String) {
+    IP4(4, 32, "ip4"),
+    TCP(6, 16, "tcp"),
+    UDP(17, 16, "udp"),
+    DCCP(33, 16, "dccp"),
+    IP6(41, 128, "ip6"),
+    SCTP(132, 16, "sctp"),
+    UTP(301, 0, "utp"),
+    UDT(302, 0, "udt"),
+    IPFS(421, LENGTH_PREFIXED_VAR_SIZE, "ipfs"),
+    HTTPS(443, 0, "https"),
+    HTTP(480, 0, "http");
 
-        public final int code, size;
-        public final String name;
-        private final byte[] encoded;
+    val encoded = encode(code);
+}
 
-        Type(int code, int size, String name) {
-            this.code = code;
-            this.size = size;
-            this.name = name;
-            this.encoded = encode(code);
-        }
+fun encode(code: Int): ByteArray {
+    val leading = Integer.numberOfLeadingZeros(code);
+    val varint = ByteArray((32 - leading + 6) / 7);
+    putUvarint(varint, code as Long);
+    return varint;
+}
 
-        static byte[] encode(int code) {
-            byte[] varint = new byte[(32 - Integer.numberOfLeadingZeros(code)+6)/7];
-            putUvarint(varint, code);
-            return varint;
-        }
+fun putUvarint(buf: ByteArray, x: Long): Int {
+    var i: Int = 0;
+    var r: Long = x;
+    while(r >= 0x80) {
+        buf[i] = (r or 0x80) as Byte;
+        r = r shr 7;
+        i = i + 1;
     }
+    buf[i] = r as Byte;
+    return i + 1;
+}
 
-    public final Type type;
-
-    public Protocol(Type type) {
-        this.type = type;
+fun readVarint(inS: InputStream): Long {
+    var x: Long = 0;
+    var s: Int = 0;
+    var i: Int = 0;
+    while(i < 10) {
+        val b = inS.read();
+        if(b == -1) { throw EOFException(); }
+        if(b < 0x80) {
+            if(i > 9 || i == 9 && b > 1) {
+                val errMsg = "Overflow reading varint ${-(i + 1)}";
+                throw IllegalStateException(errMsg);
+            }
+            return (x or ((b as Long) shl s));
+        }
+        x = x or ((b as Long) and 0x7f) shl s;
+        s = s + 7;
+        i = i + 1;
     }
+    throw IllegalStateException("Varint too long!");
+}
 
-    public void appendCode(OutputStream out) throws IOException {
+public class Protocol(givenType: ProtocolType) {
+    public val type = givenType;
+
+    public fun appendCode(out: OutputStream) {
         out.write(type.encoded);
     }
 
-    public int size() {
+    public fun getProtoSize(): Int {
         return type.size;
     }
 
-    public String name() {
-        return type.name;
+    public fun getProtoName(): String {
+        return type.pname;
     }
 
-    public int code() {
+    public fun getProtoCode(): Int {
         return type.code;
     }
 
-    @Override
-    public String toString() {
-        return name();
+    public override fun toString(): String {
+        return getProtoName();
     }
 
-    public byte[] addressToBytes(String addr) {
+    public fun addressToBytes(addr: String): ByteArray {
         try {
-            switch (type) {
-                case IP4:
+            when(type) {
+                ProtocolType.IP4 -> {
                     return Inet4Address.getByName(addr).getAddress();
-                case IP6:
+                };
+                ProtocolType.IP6 -> {
                     return Inet6Address.getByName(addr).getAddress();
-                case TCP:
-                case UDP:
-                case DCCP:
-                case SCTP:
-                    int x = Integer.parseInt(addr);
-                    if (x > 65536)
-                        throw new IllegalStateException("Failed to parse "+type.name+" address "+addr + " (> 65536");
-                    return new byte[]{(byte)(x >>8), (byte)x};
-                case IPFS:
-                    Multihash hash = Multihash.fromBase58(addr);
-                    ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                    byte[] hashBytes = hash.toBytes();
-                    byte[] varint = new byte[(32 - Integer.numberOfLeadingZeros(hashBytes.length)+6)/7];
-                    putUvarint(varint, hashBytes.length);
+                };
+                ProtocolType.TCP -> {};
+                ProtocolType.UDP -> {};
+                ProtocolType.DCCP -> {};
+                ProtocolType.SCTP -> {
+                    val x = Integer.parseInt(addr);
+                    if(x > 65536) {
+                        val errMsg = "Failed to parse ${type.name} address: " +
+                                     "${addr} > 65536";
+                        throw IllegalStateException(errMsg);
+                    }
+                    return byteArrayOf((x shr 8) as Byte, x as Byte);
+                };
+                ProtocolType.IPFS -> {
+                    val hash = Multihash.fromBase58(addr);
+                    val bout = ByteArrayOutputStream();
+                    val hashBytes = hash.toBytes();
+                    val hbLen = hashBytes.size;
+                    val leading = Integer.numberOfLeadingZeros(hbLen);
+                    val varint = ByteArray((32 - leading + 6) / 7);
+                    putUvarint(varint, hbLen as Long);
                     bout.write(varint);
                     bout.write(hashBytes);
                     return bout.toByteArray();
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        throw new IllegalStateException("Failed to parse address: "+addr);
-    }
-
-    public String readAddress(InputStream in) throws IOException {
-        int sizeForAddress = sizeForAddress(in);
-        byte[] buf;
-        switch (type) {
-            case IP4:
-                buf = new byte[sizeForAddress];
-                in.read(buf);
-                return Inet4Address.getByAddress(buf).toString().substring(1);
-            case IP6:
-                buf = new byte[sizeForAddress];
-                in.read(buf);
-                return Inet6Address.getByAddress(buf).toString().substring(1);
-            case TCP:
-            case UDP:
-            case DCCP:
-            case SCTP:
-                return Integer.toString((in.read() << 8) | (in.read()));
-            case IPFS:
-                buf = new byte[sizeForAddress];
-                in.read(buf);
-                return new Multihash(buf).toBase58();
-        }
-        throw new IllegalStateException("Unimplemented protocl type: "+type.name);
-    }
-
-    public int sizeForAddress(InputStream in) throws IOException {
-        if (type.size > 0)
-            return type.size/8;
-        if (type.size == 0)
-            return 0;
-        return (int)readVarint(in);
-    }
-
-    static int putUvarint(byte[] buf, long x) {
-        int i = 0;
-        while (x >= 0x80) {
-            buf[i] = (byte)(x | 0x80);
-            x >>= 7;
-            i++;
-        }
-        buf[i] = (byte)x;
-        return i + 1;
-    }
-
-    static long readVarint(InputStream in) throws IOException {
-        long x = 0;
-        int s=0;
-        for (int i=0; i < 10; i++) {
-            int b = in.read();
-            if (b == -1)
-                throw new EOFException();
-            if (b < 0x80) {
-                if (i > 9 || i == 9 && b > 1) {
-                    throw new IllegalStateException("Overflow reading varint" +(-(i + 1)));
                 }
-                return x | (((long)b) << s);
-            }
-            x |= ((long)b & 0x7f) << s;
-            s += 7;
+            };
+        } catch(e: IOException) {
+            throw RuntimeException(e);
         }
-        throw new IllegalStateException("Varint too long!");
+        throw IllegalStateException("Failed to parse address: ${addr}");
     }
 
-    private static Map<String, Protocol> byName = new HashMap<>();
-    private static Map<Integer, Protocol> byCode = new HashMap<>();
-
-    static {
-        for (Protocol.Type t: Protocol.Type.values()) {
-            Protocol p = new Protocol(t);
-            byName.put(p.name(), p);
-            byCode.put(p.code(), p);
+    public fun readAddress(inS: InputStream): String {
+        val sizeForAddress = sizeForAddress(inS);
+        var buf: ByteArray;
+        when(type) {
+            ProtocolType.IP4 -> {
+                buf = ByteArray(sizeForAddress);
+                inS.read(buf);
+                return Inet4Address.getByAddress(buf).toString().substring(1);
+            };
+            ProtocolType.IP6 -> {
+                buf = ByteArray(sizeForAddress);
+                inS.read(buf);
+                return Inet6Address.getByAddress(buf).toString().substring(1);
+            };
+            ProtocolType.TCP -> {};
+            ProtocolType.UDP -> {};
+            ProtocolType.DCCP -> {};
+            ProtocolType.SCTP -> {
+                return Integer.toString((inS.read() shl 8) or (inS.read()));
+            };
+            ProtocolType.IPFS -> {
+                buf = ByteArray(sizeForAddress);
+                inS.read(buf);
+                return Multihash(buf).toBase58();
+            };
         }
-
+        val errMsg = "Unimplemented protocol type: ${type.name}";
+        throw IllegalStateException(errMsg);
     }
 
-    public static Protocol get(String name) {
-        if (byName.containsKey(name))
-            return byName.get(name);
-        throw new IllegalStateException("No protocol with name: "+name);
+    public fun sizeForAddress(inS: InputStream): Int {
+        if(type.size > 0) { return type.size/8; }
+        if(type.size == 0) { return 0; }
+        return (readVarint(inS) as Int);
     }
 
-    public static Protocol get(int code) {
-        if (byCode.containsKey(code))
-            return byCode.get(code);
-        throw new IllegalStateException("No protocol with code: "+code);
+    private val byName = initializeByName();
+    private val byCode = initializeByCode();
+
+    private fun initializeByName(): HashMap<String, Protocol> {
+        val res = HashMap<String, Protocol>();
+        for(t in ProtocolType.values()) {
+            val p = Protocol(t);
+            res.put(p.getProtoName(), p);
+        }
+        return res;
+    }
+
+    private fun initializeByCode(): HashMap<Int, Protocol> {
+        val res = HashMap<Int, Protocol>();
+        for(t in ProtocolType.values()) {
+            val p = Protocol(t);
+            res.put(p.getProtoCode(), p);
+        }
+        return res;
+    }
+
+    public fun get(name: String): Protocol {
+        if(byName.containsKey(name)) { return ((byName.get(name))!!); }
+        throw IllegalStateException("No protocol with name: ${name}");
+    }
+
+    public fun get(code: Int): Protocol {
+        if(byCode.containsKey(code)) { return ((byCode?.get(code))!!); }
+        throw IllegalStateException("No protocol with code: ${code}");
     }
 }
