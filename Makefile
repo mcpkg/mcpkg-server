@@ -1,18 +1,18 @@
 SHELL := bash
 
-SOURCE_FILES = src/main/kotlin/Main.kt \
-               src/main/kotlin/FileWrapper.kt \
-               src/main/kotlin/DatabaseInterface.kt \
-               src/test/kotlin/MainTest.kt \
-               src/main/java/org/ipfs/api/IPFS.java \
-               src/main/java/org/ipfs/api/Base58.java \
-               src/main/java/org/ipfs/api/JSONParser.java \
-               src/main/java/org/ipfs/api/MerkleNode.java \
-               src/main/java/org/ipfs/api/MultiAddress.java \
-               src/main/java/org/ipfs/api/Multihash.java \
-               src/main/java/org/ipfs/api/Multipart.java \
-               src/main/java/org/ipfs/api/NamedStreamable.java \
-               src/main/java/org/ipfs/api/Protocol.java
+SOURCE_FILES = src/main/kotlin/mcpkg/Main.kt \
+               src/main/kotlin/mcpkg/FileWrapper.kt \
+               src/main/kotlin/mcpkg/DatabaseInterface.kt \
+               src/test/kotlin/mcpkg/MainTest.kt \
+               src/main/kotlin/ipfs/IPFS.kt \
+               src/main/kotlin/ipfs/Base58.kt \
+               src/main/kotlin/ipfs/JSONParser.kt \
+               src/main/kotlin/ipfs/MerkleNode.kt \
+               src/main/kotlin/ipfs/MultiAddress.kt \
+               src/main/kotlin/ipfs/Multihash.kt \
+               src/main/kotlin/ipfs/Multipart.kt \
+               src/main/kotlin/ipfs/NamedStreamable.kt \
+               src/main/kotlin/ipfs/Protocol.kt
 
 MVN = mvn
 
