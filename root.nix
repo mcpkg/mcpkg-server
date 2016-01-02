@@ -19,11 +19,12 @@ let
   packageList = (builtins.fromJSON (builtins.readFile input)).mods;
   versionList = fetchurl {
     url = "http://export.mcpbot.bspk.rs/versions.json";
-    sha256 = "1n1qxg5wyz6b8f00v9cikpjzk374ri733vzzbmijgm66hm000ijb";
+    sha256 = "14xwc3zj7g63zv8f8yfp2qalycvsffzkajhh9frxndb7qdxp0spz";
   };
+  # changes often
   forgeVersions = fetchurl {
     url = "http://files.minecraftforge.net/maven/net/minecraftforge/forge/json";
-    sha256 = "1zq57zpkdgz9lf2my6l2crzjg35pqkz764sp8b8a6387k22kwzw3";
+    sha256 = "0drafbnadc0dflgja41x9nrspl19zz6qbbv0vzas5wfybdzaqz5w";
   };
   buildMCMod = { name, repo, rev, sha256, version, outpath, deps } @ args: stdenv.mkDerivation {
     name = "${name}-${version}";
@@ -76,6 +77,8 @@ let
       "http://maven.k-4u.nl"
       "http://maven.cil.li"
       "http://maven.ic2.player.to"
+      "http://mvn.rx14.co.uk/repo"
+      "http://dl.tsr.me/artifactory/libs-release-local"
     ];
     DIR1 = "${lib.replaceChars ["."] ["/"] groupId}/${artifactId}" + (if chosen == "" then "/${v}" else "");
     DIR2 = "${lib.replaceChars ["."] ["/"] groupId}/${artifactId}" + (if chosen == "" then "/${v}" else "/${chosen}");
@@ -136,6 +139,9 @@ dependencies."com.mod-buildcraft:buildcraft"."7.0.9"
 dependencies."pneumaticCraft:PneumaticCraft-1.7.10"."1.9.15-105"
 dependencies."li.cil.oc:OpenComputers"."MC1.7.10-1.5.12.26"
 dependencies."net.industrial-craft:industrialcraft-2"."2.2.717-experimental"
+dependencies."net.mcft.copy.betterstorage:BetterStorage"."1.7.10-0.11.3.123.20"
+dependencies."appeng:Waila"."1.5.10_1.7.10"
+dependencies."org.lwjgl.lwjgl:lwjgl_util"."2.9.1"
 ];
       };
     in

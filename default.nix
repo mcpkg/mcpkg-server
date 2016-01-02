@@ -1,3 +1,4 @@
+{ input ? /tmp/output.json }:
 let
   deps = self: [
     { groupId = "com.googlecode.javaewah"; artifactId = "JavaEWAH"; versions = [ {v="0.5.6";sha256="03sl0izv83pvc3yfjayllgk9xy52wlpkmxan66sj3qa583g1p6cz"; deps = [
@@ -156,6 +157,12 @@ let
     { groupId = "pneumaticCraft"; artifactId = "PneumaticCraft-1.7.10"; versions = [ { v="1.9.15-105"; sha256="191k4m3j7fkf7grvgfbl46lnrn3s7hm35914h1ymmck1h89dvkja"; suffix = "-api"; } ]; }
     { groupId = "li.cil.oc"; artifactId = "OpenComputers"; versions = [ { v="MC1.7.10-1.5.12.26"; sha256="1f6xjp3bmwv28qvnr25wiy3jap5ky1zvllyxki4sxx4wm7gxdzi1"; suffix = "-api"; } ]; }
     { groupId = "net.industrial-craft"; artifactId = "industrialcraft-2"; versions = [ { v="2.2.717-experimental"; sha256="1fhjr8vmfk0k67zbs2f4rr5mqc2xy087kxvxq7gyp1cdgwpch2hi"; suffix = "-api"; } ]; }
+    { groupId = "net.mcft.copy.betterstorage"; artifactId = "BetterStorage"; versions = [ { v="1.7.10-0.11.3.123.20"; sha256="15kkfh9zzp17ikbvjqh91qnc9q25yr7mjp8ijy290d2vv4ci3mw8"; suffix = "-api";  } ]; }
+    { groupId = "appeng"; artifactId = "Waila"; versions = [ { v="1.5.10_1.7.10"; sha256="0lwilbrn0qq3zdc7bv940riqvhfc1fsg70vapklkaq5chbvnf7y2"; suffix = "-api"; } ]; }
+    { groupId = "org.lwjgl.lwjgl"; artifactId = "lwjgl_util"; versions = [
+      { v="2.9.1"; sha256="0lz2rd7ij3qqa648avksf8wkqp1ml3xgs54ryvr50n559pn35iyi"; deps = [ self."org.lwjgl.lwjgl:parent"."2.9.1" ]; }
+    ]; }
+    { groupId = "org.lwjgl.lwjgl"; artifactId = "parent"; versions = [ { v="2.9.1"; sha256="0m83534n0i4ds22l7fxn9hxz04fmbvvclbxkks1hxi6kc91r0aj3"; } ]; }
   ];
 in
-import ./root.nix { input = /tmp/output.json; inherit deps; }
+import ./root.nix { inherit deps input; }

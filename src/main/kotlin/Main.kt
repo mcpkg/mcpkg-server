@@ -7,7 +7,9 @@ import com.google.gson.*;
 import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.*;
+import org.eclipse.jgit.treewalk.TreeWalk
 import org.wasabi.app.AppServer
 import java.security.MessageDigest;
 import kotlin.text.Regex
@@ -27,6 +29,8 @@ data class ModInfo(var name:     String = "",
                    val versions: MutableList<Version> = ArrayList<Version>());
 
 data class OutputList(val mods: MutableList<ModInfo> = ArrayList<ModInfo>());
+
+data class NameCommitPair(val name: String, val commit: ObjectId);
 
 fun loadPackage(file: FileWrapper): InputMod {
     val gson = Gson();
@@ -80,46 +84,45 @@ fun updateGitCache(db:DatabaseInterface, mod: InputMod): ModInfo {
             e.printStackTrace(); // FIXME: handle error properly
         }
     }
-    val tags = git!!.repository.tags;
-    val i = tags.entries.iterator();
-    while(i.hasNext()) {
+
+    val i = git!!.repository.tags.entries.iterator();
+    val version_list = ArrayList<NameCommitPair>();
+    while (i.hasNext()) {
         val tag = i.next();
-
-        if (mod.skipped_versions?.contains(tag.key) ?: false) continue;
-
-        val ver = db.queryModVersion(info.name,tag.key);
-        if (ver != null) {
-            if (ver.rev == ObjectId.toString(tag.value.objectId)) {
-                info.versions.add(ver);
-                continue;
-            }
-            println("key: ${tag.key} cache: ${ver.rev} actual: ${ObjectId.toString(tag.value.objectId)}");
-        }
-        val ver2 = Version();
-        ver2.version = tag.key;
-        ver2.rev = ObjectId.toString(tag.value.objectId);
-        parseVersionInfo(ver2, info);
-        if (ver2.deps != null) {
-            info.versions.add(ver2);
-            db.saveVersion(info,ver2);
-        }
+        version_list.add(NameCommitPair(tag.key,tag.value.objectId));
     }
-    val branches = git!!.branchList().call();
-    for (branch in branches) {
-        if (mod.skipped_versions?.contains(branch.name.split("/")[2]) ?: false) continue;
+    for (branch in git!!.branchList().call()) {
+        version_list.add(NameCommitPair(branch.name.split("/")[2],branch.objectId));
+    }
 
-        val ver = db.queryModVersion(info.name, branch.name.split("/")[2]);
+    for (entry in version_list) {
+        var foundGradle = false;
+
+        if (mod.skipped_versions?.contains(entry.name) ?: false) continue;
+
+        val rw = RevWalk(git.repository);
+        val commit = rw.parseCommit(entry.commit);
+        val treeWalk = TreeWalk(git.repository);
+        treeWalk.addTree(commit.tree);
+        while (treeWalk.next()) {
+            //println("found ${treeWalk.pathString}");
+            if (treeWalk.pathString == "build.gradle") foundGradle = true;
+        }
+
+        if (!foundGradle) continue; // TODO, handle other build systems
+
+        val ver = db.queryModVersion(info.name,entry.name);
         if (ver != null) {
-            if (ver.rev == ObjectId.toString(branch.objectId)) {
+            if (ver.rev == ObjectId.toString(entry.commit)) {
                 info.versions.add(ver);
                 continue;
             }
-            println("key: ${branch.name} cache: ${ver.rev} actual: ${ObjectId.toString(branch.objectId)}");
+            println("key: ${entry.name} cache: ${ver.rev} actual: ${ObjectId.toString(entry.commit)}");
         }
         val ver2 = Version();
-        ver2.version = branch.name.split("/")[2];
-        ver2.rev = ObjectId.toString(branch.objectId);
-        parseVersionInfo(ver2,info);
+        ver2.version = entry.name;
+        ver2.rev = ObjectId.toString(entry.commit);
+        parseVersionInfo(ver2, info);
         if (ver2.deps != null) {
             info.versions.add(ver2);
             db.saveVersion(info,ver2);
@@ -148,7 +151,7 @@ fun parseVersionInfo(ver: Version, info: ModInfo) {
             var words = it.split(" ");
             var localpath = words[2];
             //println("found path ${localpath}");
-            ver.deps = parseDeps(localpath,info.name);
+            //ver.deps = parseDeps(localpath,info.name);
         }
     };
     ver.sha256 = hash ?: "";
