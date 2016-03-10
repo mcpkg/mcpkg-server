@@ -1,12 +1,18 @@
 SHELL := bash
 
 SOURCE_FILES = src/main/kotlin/Main.kt \
+               src/main/kotlin/FileWrapper.kt \
+               src/main/kotlin/DatabaseInterface.kt \
                src/test/kotlin/MainTest.kt \
-               src/main/kotlin/FileWrapper.kt
-
-TEST_FILES = test-data/ae2.json \
-             test-data/mekanism.json \
-             test-data/blood-magic.json
+               src/main/java/org/ipfs/api/IPFS.java \
+               src/main/java/org/ipfs/api/Base58.java \
+               src/main/java/org/ipfs/api/JSONParser.java \
+               src/main/java/org/ipfs/api/MerkleNode.java \
+               src/main/java/org/ipfs/api/MultiAddress.java \
+               src/main/java/org/ipfs/api/Multihash.java \
+               src/main/java/org/ipfs/api/Multipart.java \
+               src/main/java/org/ipfs/api/NamedStreamable.java \
+               src/main/java/org/ipfs/api/Protocol.java
 
 MVN = mvn
 
@@ -14,20 +20,16 @@ MVN_FLAGS = -T 8
 
 RUN_MVN = $(MVN) $(MVN_FLAGS)
 
-TEST_TMP = /tmp/packages     
-
 TEST_ARGS = ""
 
-all: build
+all: build doc
+
+doc: $(SOURCE_FILES)
+	$(RUN_MVN) "pre-site"
 
 build: $(SOURCE_FILES)
 	$(RUN_MVN) "compile"
 	$(RUN_MVN) "test-compile"
 
-test-setup: $(TEST_FILES)
-	-[ -e $(TEST_TMP) ] && rm -rf $(TEST_TMP)
-	mkdir -pv $(TEST_TMP)
-	cp -vt $(TEST_TMP) $(TEST_FILES)
-
 test: build test-setup
-	$(RUN_MVN) "exec:java" -Dexec.args=$(TEST_ARGS)
+	cd test-data; $(RUN_MVN) "exec:java" -Dexec.args=$(TEST_ARGS)
